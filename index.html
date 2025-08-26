@@ -96,34 +96,34 @@ function runSimulation() {
   }
 
   // Parameters
-  const C_albumen = 3800;      // J/(kg*K)
-  const C_yolk = 3200;         // J/(kg*K)
-  const k_albumenyolk = 0.3;   // W/K
-  const h_shell = 250;         // W/(m^2*K)
-  const A_shell = 0.003;       // m^2
-  const mass_albumen = 0.03;   // kg
-  const mass_yolk = 0.017;     // kg
+  const C_albumen = 3800;      // heat capacity of albumen [J/(kg*K)]
+  const C_yolk = 3200;         // heat capacity of yolk [J/(kg*K)]
+  const k_albumenyolk = 0.3;   // conductance albumen-yolk [W/K]
+  const h_shell = 250;         // convective heat transfer coefficient [W/(m^2*K)]
+  const A_shell = 0.003;       // eggshell surface area [m^2]
+  const mass_albumen = 0.03;   // mass of albumen in egg [kg]
+  const mass_yolk = 0.017;     // mass of yolk in egg [kg]
 
-  const k0_albumen = 1e40;     // s^-1
-  const Ea_albumen = 2.7e5;    // J/mol
-  const k0_yolk = 2.5e39;      // s^-1
-  const Ea_yolk = 2.7e5;       // J/mol
-  const R = 8.314;             // J/(mol*K)
+  const k0_albumen = 1e40;     // pre-exponential factor for albumen denaturation [s^-1]
+  const Ea_albumen = 2.7e5;    // activation energy for albumen [J/mol]
+  const k0_yolk = 2.5e39;      // pre-exponential factor for yolk denaturation [s^-1]
+  const Ea_yolk = 2.7e5;       // activation energy for yolk [J/mol]
+  const R = 8.314;             // universal gas constant [J/(mol*K)]
 
   // Initial states
-  let T_albumen = 20+273.15; // K
-  let T_yolk = 20+273.15;    // K
-  let X_albumen = 0;
-  let X_yolk = 0;
+  let T_albumen = 20+273.15;   // temperature of the albumen [K]
+  let T_yolk = 20+273.15;      // temperature of the yolk [K]
+  let X_albumen = 0;           // albumen cooking degree [fraction]
+  let X_yolk = 0;              // yolk cooking degree [fraction]
 
   const time = [], uTemp = [], yTemp = [], aTemp = [], yCook = [], aCook = [];
   for (let i = 0; i <= steps; i++) {
     const t = i * dt;
-    const T_env = getWaterTemp(t, profile) + 273.15; // convert °C to K
+    const T_env = getWaterTemp(t, profile) + 273.15; // temperature of surrounding water [K]
 
     // Heat flows
-    const Q_env_albumen = h_shell * A_shell * (T_env - T_albumen);
-    const Q_albumen_yolk = k_albumenyolk * (T_albumen - T_yolk);
+    const Q_env_albumen = h_shell * A_shell * (T_env - T_albumen); // environment to albumen [W]
+    const Q_albumen_yolk = k_albumenyolk * (T_albumen - T_yolk);   // albumen to yolk [W]
 
     // Energy balances
     const dT_albumen = (Q_env_albumen - Q_albumen_yolk) / (mass_albumen * C_albumen);
