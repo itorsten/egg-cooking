@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Egg Cooking Simulator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    canvas { max-width: 600px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Egg Cooking Simulator</h1>
+  <div>
+    <label>Total time (minutes):
+      <input type="number" id="totalTime" value="10" min="1" step="0.5">
+    </label>
+  </div>
+  <div>
+    <label>Water temperature profile:
+      <select id="profileType">
+        <option value="constant">Constant</option>
+        <option value="schedule">Time schedule</option>
+      </select>
+    </label>
+  </div>
+  <div id="constantInput">
+    <label>Water temperature (°C):
+      <input type="number" id="waterTemp" value="100">
+    </label>
+  </div>
+  <div id="scheduleInput" style="display:none;">
+    <p>Enter time,temperature pairs (minutes, °C) separated by newline:</p>
+    <textarea id="scheduleData" rows="4">0,100
+5,90
+10,80</textarea>
+  </div>
+  <button id="runBtn">Run Simulation</button>
+  <canvas id="tempChart"></canvas>
+  <canvas id="cookChart"></canvas>
+
+<script>
+// Switch between constant and schedule inputs
+const profileType = document.getElementById('profileType');
+profileType.addEventListener('change', () => {
+  const isConstant = profileType.value === 'constant';
+  document.getElementById('constantInput').style.display = isConstant ? 'block' : 'none';
+  document.getElementById('scheduleInput').style.display = isConstant ? 'none' : 'block';
+});
+
+// Parse schedule textarea into sorted time-temperature objects
+function parseSchedule(text) {
+  const lines = text.trim().split(/\n+/);
+  const schedule = [];
+  for (const line of lines) {
+    const [t, temp] = line.split(',').map(Number);
+    if (!isNaN(t) && !isNaN(temp)) {
+      schedule.push({ t, temp });
+    }
+  }
+  schedule.sort((a, b) => a.t - b.t);
+  return schedule;
+}
+
+// Determine water temperature at time t
+function getWaterTemp(t, profile) {
+  if (profile.type === 'constant') return profile.temp;
+  const sched = profile.schedule;
+  if (t <= sched[0].t) return sched[0].temp;
+  for (let i = 0; i < sched.length - 1; i++) {
+    const a = sched[i], b = sched[i + 1];
+    if (t >= a.t && t <= b.t) {
+      const f = (t - a.t) / (b.t - a.t);
+      return a.temp + f * (b.temp - a.temp);
+    }
+  }
+  return sched[sched.length - 1].temp;
+}
+
+// Run ODE simulation and plot results
+function runSimulation() {
+  const totalTime = Number(document.getElementById('totalTime').value);
+  const dt = 0.1; // minutes
+  const steps = Math.round(totalTime / dt);
+  const type = profileType.value;
+  let profile;
+  if (type === 'constant') {
+    profile = { type: 'constant', temp: Number(document.getElementById('waterTemp').value) };
+  } else {
+    profile = { type: 'schedule', schedule: parseSchedule(document.getElementById('scheduleData').value) };
+  }
+
+  let Ty = 20, Ta = 20; // temperatures
+  let Cy = 0, Ca = 0;   // cooking degrees
+  const tauY = 5, tauA = 3, k = 0.01, T0 = 60; // placeholder parameters
+
+  const time = [], yTemp = [], aTemp = [], yCook = [], aCook = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i * dt;
+    const Tw = getWaterTemp(t, profile);
+    const dTy = (Tw - Ty) / tauY;
+    const dTa = (Tw - Ta) / tauA;
+    const dCy = Ty > T0 ? k * (Ty - T0) : 0;
+    const dCa = Ta > T0 ? k * (Ta - T0) : 0;
+    Ty += dt * dTy;
+    Ta += dt * dTa;
+    Cy += dt * dCy;
+    Ca += dt * dCa;
+    time.push(t);
+    yTemp.push(Ty); aTemp.push(Ta);
+    yCook.push(Cy); aCook.push(Ca);
+  }
+  plotResults(time, yTemp, aTemp, yCook, aCook);
+}
+
+document.getElementById('runBtn').addEventListener('click', runSimulation);
+
+let tempChart, cookChart;
+function plotResults(time, yTemp, aTemp, yCook, aCook) {
+  if (tempChart) tempChart.destroy();
+  if (cookChart) cookChart.destroy();
+
+  const ctxT = document.getElementById('tempChart');
+  tempChart = new Chart(ctxT, {
+    type: 'line',
+    data: {
+      labels: time,
+      datasets: [
+        { label: 'Yolk Temp', data: yTemp, borderColor: 'orange', fill: false },
+        { label: 'Albumen Temp', data: aTemp, borderColor: 'blue', fill: false }
+      ]
+    },
+    options: {
+      scales: {
+        x: { title: { display: true, text: 'Time (min)' } },
+        y: { title: { display: true, text: 'Temp (°C)' } }
+      }
+    }
+  });
+
+  const ctxC = document.getElementById('cookChart');
+  cookChart = new Chart(ctxC, {
+    type: 'line',
+    data: {
+      labels: time,
+      datasets: [
+        { label: 'Yolk Cooking', data: yCook, borderColor: 'red', fill: false },
+        { label: 'Albumen Cooking', data: aCook, borderColor: 'green', fill: false }
+      ]
+    },
+    options: {
+      scales: {
+        x: { title: { display: true, text: 'Time (min)' } },
+        y: { title: { display: true, text: 'Cooking Degree' } }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
