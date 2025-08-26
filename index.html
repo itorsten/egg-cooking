@@ -12,31 +12,28 @@
 <body>
   <h1>Egg Cooking Simulator</h1>
   <div>
-    <label>Total time (minutes):
-      <input type="number" id="totalTime" value="10" min="1" step="0.5">
-    </label>
-  </div>
-  <div>
-    <label>Water temperature profile:
-      <select id="profileType">
-        <option value="constant">Constant</option>
-        <option value="schedule">Time schedule</option>
-      </select>
-    </label>
-  </div>
-  <div id="constantInput">
-    <label>Water temperature (°C):
-      <input type="number" id="waterTemp" value="100">
-    </label>
-  </div>
-  <div id="scheduleInput" style="display:none;">
-    <p>Enter time,temperature pairs (seconds, °C) separated by newline:</p>
-    <textarea id="scheduleData" rows="4">0,10
-120,100
-480,100
-481,10
-600,10
-</textarea>
+    <label for="profileType">Temperature profile preset:</label>
+    <select id="profileType">
+      <option value="hard">Hard boiled</option>
+      <option value="soft">Soft boiled</option>
+      <option value="sousvide">Sous vide</option>
+      <option value="periodic">Periodic</option>
+      <option value="coldstart">Start in cold water</option>
+      <option value="sousvidefinish">Sous vide + finishing boil</option>
+    </select>
+    <br>
+    <label for="waterTemp" id="waterTempLabel">Water temperature (°C):</label>
+    <input type="number" id="waterTemp" value="100" step="1">
+    <br>
+    <label for="totalTime" id="totalTimeLabel">Total time (min):</label>
+    <input type="number" id="totalTime" value="10" step="1">
+    <br>
+    <div id="scheduleInput" style="display:none;">
+      <label for="scheduleData">Schedule (time,temperature pairs):</label>
+      <textarea id="scheduleData" rows="3">0,20
+2,100
+10,100</textarea>
+    </div>
   </div>
   <button id="runBtn">Run Simulation</button>
   <canvas id="tempChart"></canvas>
@@ -45,10 +42,68 @@
 <script>
 // Switch between constant and schedule inputs
 const profileType = document.getElementById('profileType');
-profileType.addEventListener('change', () => {
-  const isConstant = profileType.value === 'constant';
-  document.getElementById('constantInput').style.display = isConstant ? 'block' : 'none';
-  document.getElementById('scheduleInput').style.display = isConstant ? 'none' : 'block';
+const waterTemp = document.getElementById('waterTemp');
+const totalTime = document.getElementById('totalTime');
+const scheduleInput = document.getElementById('scheduleInput');
+const scheduleData = document.getElementById('scheduleData');
+
+profileType.addEventListener('change', function () {
+  switch (profileType.value) {
+    case 'hard':
+      waterTemp.value = 100;
+      totalTime.value = 12;
+      waterTemp.style.display = '';
+      document.getElementById('waterTempLabel').style.display = '';
+      totalTime.style.display = '';
+      document.getElementById('totalTimeLabel').style.display = '';
+      scheduleInput.style.display = 'none';
+      break;
+    case 'soft':
+      waterTemp.value = 100;
+      totalTime.value = 6;
+      waterTemp.style.display = '';
+      document.getElementById('waterTempLabel').style.display = '';
+      totalTime.style.display = '';
+      document.getElementById('totalTimeLabel').style.display = '';
+      scheduleInput.style.display = 'none';
+      break;
+    case 'sousvide':
+      waterTemp.value = 65;
+      totalTime.value = 60;
+      waterTemp.style.display = '';
+      document.getElementById('waterTempLabel').style.display = '';
+      totalTime.style.display = '';
+      document.getElementById('totalTimeLabel').style.display = '';
+      scheduleInput.style.display = 'none';
+      break;
+    case 'periodic':
+      scheduleInput.style.display = '';
+      totalTime.value = 32;
+      waterTemp.style.display = 'none';
+      document.getElementById('waterTempLabel').style.display = 'none';
+      totalTime.style.display = '';
+      document.getElementById('totalTimeLabel').style.display = '';
+      scheduleData.value = Array.from({length: 1920/120+1}, (_,i)=>[`${i*120+1},${i%2?30:100}`, `${i*120+120},${i%2?30:100}`]).flat().join("\n");
+      break;
+    case 'coldstart':
+      scheduleInput.style.display = '';
+      totalTime.value = 10;
+      waterTemp.style.display = 'none';
+      document.getElementById('waterTempLabel').style.display = 'none';
+      totalTime.style.display = '';
+      document.getElementById('totalTimeLabel').style.display = '';
+      scheduleData.value = "0,10\n120,100\n480,100\n481,10\n600,10";
+      break;
+    case 'sousvidefinish':
+      scheduleInput.style.display = '';
+      totalTime.value = 34;
+      waterTemp.style.display = 'none';
+      document.getElementById('waterTempLabel').style.display = 'none';
+      totalTime.style.display = '';
+      document.getElementById('totalTimeLabel').style.display = '';
+      scheduleData.value = "0,65\n1800,65\n1860,100\n1920,100\n1940,10";
+      break;
+  }
 });
 
 // Parse schedule textarea into sorted time-temperature objects
@@ -82,7 +137,7 @@ function getWaterTemp(t, profile) {
 
 // Run ODE simulation and plot results
 function runSimulation() {
-  const totalTime = Number(document.getElementById('totalTime').value*60);
+  const totalTime = Number(document.getElementById('totalTime').value) * 60;
   const dt = 0.1; // Solver time step in seconds
   const steps = Math.round(totalTime / dt);
   const outputTimestep = 15; // Seconds between output points
@@ -91,11 +146,12 @@ function runSimulation() {
   // Build water temperature profile
   const type = profileType.value;
   let profile;
-  if (type === 'constant') {
-    profile = { type: 'constant', temp: Number(document.getElementById('waterTemp').value) };
-  } else {
-    profile = { type: 'schedule', schedule: parseSchedule(document.getElementById('scheduleData').value) };
-  }
+  if (type === 'hard' || type === 'soft' || type === 'sousvide') {
+    profile = { type: 'constant', temp: Number(waterTemp.value) };
+  } else if (type === 'periodic' || type === 'coldstart' || type === 'sousvidefinish') {
+        profile = { type: 'schedule', schedule: parseSchedule(document.getElementById('scheduleData').value) };
+
+    }
 
   // Parameters
   const C_albumen = 3800;      // heat capacity of albumen [J/(kg*K)]
