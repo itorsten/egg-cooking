@@ -83,8 +83,10 @@ function getWaterTemp(t, profile) {
 // Run ODE simulation and plot results
 function runSimulation() {
   const totalTime = Number(document.getElementById('totalTime').value*60);
-  const dt = 1; // Solver time step in seconds
+  const dt = 0.1; // Solver time step in seconds
   const steps = Math.round(totalTime / dt);
+  const outputTimestep = 15; // Seconds between output points
+  const outputDecimation = Math.max(1, Math.round(outputTimestep / dt));
 
   // Build water temperature profile
   const type = profileType.value;
@@ -118,8 +120,21 @@ function runSimulation() {
 
   const time = [], uTemp = [], yTemp = [], aTemp = [], yCook = [], aCook = [];
   for (let i = 0; i <= steps; i++) {
+    // Get time and inputs
     const t = i * dt;
     const T_env = getWaterTemp(t, profile) + 273.15; // temperature of surrounding water [K]
+
+    // Store outputs
+    if (i % outputDecimation === 0 || i === steps) {
+      time.push(t/60); // Convert to minutes for display
+      uTemp.push(T_env - 273.15); // Convert K to °C for display
+      yTemp.push(T_yolk - 273.15);
+      aTemp.push(T_albumen - 273.15);
+      yCook.push(X_yolk);
+      aCook.push(X_albumen);
+    }
+
+    // Update model...
 
     // Heat flows
     const Q_env_albumen = h_shell * A_shell * (T_env - T_albumen); // environment to albumen [W]
@@ -142,15 +157,8 @@ function runSimulation() {
     // Clamp cooking degrees between 0 and 1
     X_albumen = Math.min(X_albumen, 1);
     X_yolk = Math.min(X_yolk, 1);
-
-    // Store values (convert K back to °C for display)
-    time.push(t);
-    uTemp.push(T_env - 273.15); // Convert K to °C
-    yTemp.push(T_yolk - 273.15);
-    aTemp.push(T_albumen - 273.15);
-    yCook.push(X_yolk);
-    aCook.push(X_albumen);
   }
+
   plotResults(time, uTemp, yTemp, aTemp, yCook, aCook);
 }
 
