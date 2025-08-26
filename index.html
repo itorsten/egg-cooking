@@ -99,17 +99,17 @@ function runSimulation() {
 
   // Parameters
   const C_albumen = 3800;      // heat capacity of albumen [J/(kg*K)]
-  const C_yolk = 3200;         // heat capacity of yolk [J/(kg*K)]
-  const k_albumenyolk = 0.3;   // conductance albumen-yolk [W/K]
-  const h_shell = 250;         // convective heat transfer coefficient [W/(m^2*K)]
+  const C_yolk = 3120;         // heat capacity of yolk [J/(kg*K)]
+  const k_albumenyolk = 0.35;   // conductance albumen-yolk [W/K]
+  const h_shell = 500;         // convective heat transfer coefficient [W/(m^2*K)]
   const A_shell = 0.003;       // eggshell surface area [m^2]
-  const mass_albumen = 0.03;   // mass of albumen in egg [kg]
-  const mass_yolk = 0.017;     // mass of yolk in egg [kg]
-
-  const k0_albumen = 1e40;     // pre-exponential factor for albumen denaturation [s^-1]
-  const Ea_albumen = 2.7e5;    // activation energy for albumen [J/mol]
-  const k0_yolk = 2.5e39;      // pre-exponential factor for yolk denaturation [s^-1]
-  const Ea_yolk = 2.7e5;       // activation energy for yolk [J/mol]
+  const mass_albumen = 0.025;   // mass of albumen in egg [kg]
+  const mass_yolk = 0.02;     // mass of yolk in egg [kg]
+  
+  const k0_albumen = 4.85e60;  // pre-exponential factor for albumen denaturation [s^-1]
+  const Ea_albumen = 4.185e5;  // activation energy for albumen [J/mol]
+  const k0_yolk = 2.72e50;     // pre-exponential factor for yolk denaturation [s^-1]
+  const Ea_yolk = 3.443e5;     // activation energy for yolk [J/mol]
   const R = 8.314;             // universal gas constant [J/(mol*K)]
 
   // Initial states
