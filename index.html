@@ -30,10 +30,13 @@
     </label>
   </div>
   <div id="scheduleInput" style="display:none;">
-    <p>Enter time,temperature pairs (minutes, °C) separated by newline:</p>
-    <textarea id="scheduleData" rows="4">0,100
-5,90
-10,80</textarea>
+    <p>Enter time,temperature pairs (seconds, °C) separated by newline:</p>
+    <textarea id="scheduleData" rows="4">0,10
+120,100
+480,100
+481,10
+600,10
+</textarea>
   </div>
   <button id="runBtn">Run Simulation</button>
   <canvas id="tempChart"></canvas>
@@ -79,9 +82,11 @@ function getWaterTemp(t, profile) {
 
 // Run ODE simulation and plot results
 function runSimulation() {
-  const totalTime = Number(document.getElementById('totalTime').value);
-  const dt = 0.1; // minutes
+  const totalTime = Number(document.getElementById('totalTime').value*60);
+  const dt = 1; // Solver time step in seconds
   const steps = Math.round(totalTime / dt);
+
+  // Build water temperature profile
   const type = profileType.value;
   let profile;
   if (type === 'constant') {
@@ -90,33 +95,69 @@ function runSimulation() {
     profile = { type: 'schedule', schedule: parseSchedule(document.getElementById('scheduleData').value) };
   }
 
-  let Ty = 20, Ta = 20; // temperatures
-  let Cy = 0, Ca = 0;   // cooking degrees
-  const tauY = 5, tauA = 3, k = 0.01, T0 = 60; // placeholder parameters
+  // Parameters
+  const C_albumen = 3800;      // J/(kg*K)
+  const C_yolk = 3200;         // J/(kg*K)
+  const k_albumenyolk = 0.3;   // W/K
+  const h_shell = 250;         // W/(m^2*K)
+  const A_shell = 0.003;       // m^2
+  const mass_albumen = 0.03;   // kg
+  const mass_yolk = 0.017;     // kg
 
-  const time = [], yTemp = [], aTemp = [], yCook = [], aCook = [];
+  const k0_albumen = 1e40;     // s^-1
+  const Ea_albumen = 2.7e5;    // J/mol
+  const k0_yolk = 2.5e39;      // s^-1
+  const Ea_yolk = 2.7e5;       // J/mol
+  const R = 8.314;             // J/(mol*K)
+
+  // Initial states
+  let T_albumen = 20+273.15; // K
+  let T_yolk = 20+273.15;    // K
+  let X_albumen = 0;
+  let X_yolk = 0;
+
+  const time = [], uTemp = [], yTemp = [], aTemp = [], yCook = [], aCook = [];
   for (let i = 0; i <= steps; i++) {
     const t = i * dt;
-    const Tw = getWaterTemp(t, profile);
-    const dTy = (Tw - Ty) / tauY;
-    const dTa = (Tw - Ta) / tauA;
-    const dCy = Ty > T0 ? k * (Ty - T0) : 0;
-    const dCa = Ta > T0 ? k * (Ta - T0) : 0;
-    Ty += dt * dTy;
-    Ta += dt * dTa;
-    Cy += dt * dCy;
-    Ca += dt * dCa;
+    const T_env = getWaterTemp(t, profile) + 273.15; // convert °C to K
+
+    // Heat flows
+    const Q_env_albumen = h_shell * A_shell * (T_env - T_albumen);
+    const Q_albumen_yolk = k_albumenyolk * (T_albumen - T_yolk);
+
+    // Energy balances
+    const dT_albumen = (Q_env_albumen - Q_albumen_yolk) / (mass_albumen * C_albumen);
+    const dT_yolk = Q_albumen_yolk / (mass_yolk * C_yolk);
+
+    // Denaturation kinetics
+    const dX_albumen = (1 - X_albumen) * Math.exp(-Ea_albumen / (R * T_albumen)) * k0_albumen;
+    const dX_yolk = (1 - X_yolk) * Math.exp(-Ea_yolk / (R * T_yolk)) * k0_yolk;
+
+    // Euler integration
+    T_albumen += dt * dT_albumen;
+    T_yolk    += dt * dT_yolk;
+    X_albumen += dt * dX_albumen;
+    X_yolk    += dt * dX_yolk;
+
+    // Clamp cooking degrees between 0 and 1
+    X_albumen = Math.min(X_albumen, 1);
+    X_yolk = Math.min(X_yolk, 1);
+
+    // Store values (convert K back to °C for display)
     time.push(t);
-    yTemp.push(Ty); aTemp.push(Ta);
-    yCook.push(Cy); aCook.push(Ca);
+    uTemp.push(T_env - 273.15); // Convert K to °C
+    yTemp.push(T_yolk - 273.15);
+    aTemp.push(T_albumen - 273.15);
+    yCook.push(X_yolk);
+    aCook.push(X_albumen);
   }
-  plotResults(time, yTemp, aTemp, yCook, aCook);
+  plotResults(time, uTemp, yTemp, aTemp, yCook, aCook);
 }
 
 document.getElementById('runBtn').addEventListener('click', runSimulation);
 
 let tempChart, cookChart;
-function plotResults(time, yTemp, aTemp, yCook, aCook) {
+function plotResults(time, uTemp, yTemp, aTemp, yCook, aCook) {
   if (tempChart) tempChart.destroy();
   if (cookChart) cookChart.destroy();
 
@@ -126,8 +167,9 @@ function plotResults(time, yTemp, aTemp, yCook, aCook) {
     data: {
       labels: time,
       datasets: [
-        { label: 'Yolk Temp', data: yTemp, borderColor: 'orange', fill: false },
-        { label: 'Albumen Temp', data: aTemp, borderColor: 'blue', fill: false }
+        { label: 'Water', data: uTemp, borderColor: 'blue', fill: false },
+        { label: 'Yolk', data: yTemp, borderColor: 'orange', fill: false },
+        { label: 'Albumen', data: aTemp, borderColor: 'grey', fill: false }
       ]
     },
     options: {
@@ -144,8 +186,8 @@ function plotResults(time, yTemp, aTemp, yCook, aCook) {
     data: {
       labels: time,
       datasets: [
-        { label: 'Yolk Cooking', data: yCook, borderColor: 'red', fill: false },
-        { label: 'Albumen Cooking', data: aCook, borderColor: 'green', fill: false }
+        { label: 'Yolk', data: yCook, borderColor: 'orange', fill: false },
+        { label: 'Albumen', data: aCook, borderColor: 'grey', fill: false }
       ]
     },
     options: {
