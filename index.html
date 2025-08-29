@@ -1,48 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Egg Cooking Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
-    body { font-family: sans-serif; margin: 20px; }
-    canvas { max-width: 600px; margin-top: 20px; }
+    body {
+      margin: 0;
+      font-family: 'Inter', 'Roboto', 'Open Sans', sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: #fff;
+    }
+    header {
+      text-align: center;
+      padding: 20px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2.2em;
+    }
+    header p {
+      margin: 5px 0 0 0;
+      font-size: 1em;
+    }
+    main {
+      flex: 1;
+      padding: 0 20px 20px 20px;
+      align-self: center;
+    }
+    #layout {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 938px;
+      width: 80vw;
+    }
+    .input-panel {
+      max-width: 768px;
+      width: 100%;
+    }
+    .input-panel label {
+      display: block;
+      margin-top: 10px;
+      font-weight: 500;
+    }
+    .input-panel input,
+    .input-panel select,
+    .input-panel textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px;
+      font-size: 1em;
+      margin-top: 4px;
+    }
+    .input-panel textarea {
+      resize: vertical;
+    }
+    .hint {
+      font-size: 0.85em;
+      color: #666;
+    }
+    .run-btn-wrapper {
+      text-align: right;
+      margin-top: 15px;
+    }
+    .run-btn {
+      background: #f5ba31;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1.1em;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .run-btn:active {
+      transform: scale(0.98);
+    }
+    .output-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+    }
+    .output-panel canvas {
+      width: 100%;
+      display: none;
+    }
+    footer {
+      margin-top: auto;
+      font-size: 0.85em;
+      text-align: center;
+      color: #555;
+      padding: 10px 0;
+    }
+    @media (min-width: 768px) {
+      #layout {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+      .input-panel {
+        width: 35%
+      }
+      .output-panel {
+        width: 65%;
+      }
+      .output-panel canvas {
+        flex: 1;
+      }
+    }
+    @media (max-width: 767px) {
+      #layout {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .output-panel {
+        width: 100%;
+      }
+      .input-panel {
+        width: 100%
+      }
+      .run-btn-wrapper {
+        text-align: initial;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Egg Cooking Simulator</h1>
-  <div>
-    <label for="profileType">Temperature profile preset:</label>
-    <select id="profileType">
-      <option value="hard">Hard boiled</option>
-      <option value="soft">Soft boiled</option>
-      <option value="sousvide">Sous vide</option>
-      <option value="periodic">Periodic</option>
-      <option value="coldstart">Start in cold water</option>
-      <option value="sousvidefinish">Sous vide + finishing boil</option>
-    </select>
-    <br>
-    <label for="waterTemp" id="waterTempLabel">Water temperature (°C):</label>
-    <input type="number" id="waterTemp" value="100" step="1">
-    <br>
-    <label for="totalTime" id="totalTimeLabel">Total time (min):</label>
-    <input type="number" id="totalTime" value="10" step="1">
-    <br>
-    <div id="scheduleInput" style="display:none;">
-      <label for="scheduleData">Schedule (time [s],temperature [°C] pairs):</label>
-      <textarea id="scheduleData" rows="3">0,20
-2,100
-10,100</textarea>
+  <header>
+    <h1>🥚 Egg Cooking Simulator</h1>
+    <p>Experiment with cooking time and temperature for the perfect egg</p>
+  </header>
+  <main>
+    <div id="layout">
+      <div class="input-panel">
+        <label for="profileType">Preset</label>
+        <select id="profileType">
+          <option value="hard">Hard boiled</option>
+          <option value="soft">Soft boiled</option>
+          <option value="sousvide">Sous vide</option>
+          <option value="periodic">Periodic</option>
+          <option value="coldstart">Start in cold water</option>
+          <option value="sousvidefinish">Sous vide + finishing boil</option>
+        </select>
+        <label for="totalTime" id="totalTimeLabel">⏱️ Total time time (minutes)</label>
+        <input type="number" id="totalTime" value="10" step="1" placeholder="Enter cooking time in minutes." min="1" aria-label="total cooking time">
+        <label for="waterTemp" id="waterTempLabel">🌡️ Water temperature (°C)</label>
+        <input type="number" id="waterTemp" value="100" step="1" min="0" max="100" aria-label="water temperature">
+        <div id="scheduleInput" style="display:none;">
+          <label for="scheduleData">Schedule (time&nbsp;[s],temperature&nbsp;[°C] pairs)</label>
+          <textarea id="scheduleData" rows="4" placeholder="60 – 100"></textarea>
+          <div class="hint">Enter one pair per line, comma separated, e.g. <code>60,100</code></div>
+        </div>
+        <div class="run-btn-wrapper">
+          <button id="runBtn" class="run-btn">Run simulation</button>
+        </div>
+      </div>
+      <div class="output-panel">
+        <canvas id="tempChart"></canvas>
+        <canvas id="cookChart"></canvas>
+      </div>
     </div>
-  </div>
-  <button id="runBtn">Run Simulation</button>
-  <canvas id="tempChart"></canvas>
-  <canvas id="cookChart"></canvas>
-  <footer style="margin-top: 20px; font-size: 0.95em; color: #555;">
-    For details, see <a href="https://github.com/itorsten/egg-cooking" target="_blank">github.com/itorsten/egg-cooking</a>.<br>
+  </main>
+  <footer>
+    For details, see <a href="https://github.com/itorsten/egg-cooking" target="_blank">github.com/itorsten/egg-cooking</a>.<br />
     &copy; 2025 Ivar Torstensson
   </footer>
-<script>
+  <script>
 // Switch between constant and schedule inputs
 const profileType = document.getElementById('profileType');
 const waterTemp = document.getElementById('waterTemp');
@@ -152,19 +282,18 @@ function runSimulation() {
   if (type === 'hard' || type === 'soft' || type === 'sousvide') {
     profile = { type: 'constant', temp: Number(waterTemp.value) };
   } else if (type === 'periodic' || type === 'coldstart' || type === 'sousvidefinish') {
-        profile = { type: 'schedule', schedule: parseSchedule(document.getElementById('scheduleData').value) };
-
-    }
+    profile = { type: 'schedule', schedule: parseSchedule(scheduleData.value) };
+  }
 
   // Parameters
   const C_albumen = 3800;      // heat capacity of albumen [J/(kg*K)]
   const C_yolk = 3120;         // heat capacity of yolk [J/(kg*K)]
-  const k_albumenyolk = 0.35;   // conductance albumen-yolk [W/K]
+  const k_albumenyolk = 0.35;  // conductance albumen-yolk [W/K]
   const h_shell = 500;         // convective heat transfer coefficient [W/(m^2*K)]
   const A_shell = 0.003;       // eggshell surface area [m^2]
-  const mass_albumen = 0.025;   // mass of albumen in egg [kg]
-  const mass_yolk = 0.02;     // mass of yolk in egg [kg]
-  
+  const mass_albumen = 0.025;  // mass of albumen in egg [kg]
+  const mass_yolk = 0.02;      // mass of yolk in egg [kg]
+
   const k0_albumen = 4.85e60;  // pre-exponential factor for albumen denaturation [s^-1]
   const Ea_albumen = 4.185e5;  // activation energy for albumen [J/mol]
   const k0_yolk = 2.72e50;     // pre-exponential factor for yolk denaturation [s^-1]
@@ -172,10 +301,10 @@ function runSimulation() {
   const R = 8.314;             // universal gas constant [J/(mol*K)]
 
   // Initial states
-  let T_albumen = 20+273.15;   // temperature of the albumen [K]
-  let T_yolk = 20+273.15;      // temperature of the yolk [K]
-  let X_albumen = 0;           // albumen cooking degree [fraction]
-  let X_yolk = 0;              // yolk cooking degree [fraction]
+  let T_albumen = 20 + 273.15;   // temperature of the albumen [K]
+  let T_yolk = 20 + 273.15;      // temperature of the yolk [K]
+  let X_albumen = 0;             // albumen cooking degree [fraction]
+  let X_yolk = 0;                // yolk cooking degree [fraction]
 
   const time = [], uTemp = [], yTemp = [], aTemp = [], yCook = [], aCook = [];
   for (let i = 0; i <= steps; i++) {
@@ -185,7 +314,7 @@ function runSimulation() {
 
     // Store outputs
     if (i % outputDecimation === 0 || i === steps) {
-      time.push(t/60); // Convert to minutes for display
+      time.push(t / 60); // Convert to minutes for display
       uTemp.push(T_env - 273.15); // Convert K to °C for display
       yTemp.push(T_yolk - 273.15);
       aTemp.push(T_albumen - 273.15);
@@ -240,6 +369,7 @@ function plotResults(time, uTemp, yTemp, aTemp, yCook, aCook) {
       ]
     },
     options: {
+      maintainAspectRatio: true,
       scales: {
         x: { title: { display: true, text: 'Time (min)' } },
         y: { title: { display: true, text: 'Temp (°C)' } }
@@ -258,6 +388,7 @@ function plotResults(time, uTemp, yTemp, aTemp, yCook, aCook) {
       ]
     },
     options: {
+      maintainAspectRatio: true,
       scales: {
         x: { title: { display: true, text: 'Time (min)' } },
         y: { title: { display: true, text: 'Cooking Degree' } }
@@ -265,6 +396,6 @@ function plotResults(time, uTemp, yTemp, aTemp, yCook, aCook) {
     }
   });
 }
-</script>
+  </script>
 </body>
 </html>
